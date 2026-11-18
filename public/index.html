@@ -1,0 +1,167 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Portal Web Conference WebRTC (macOS White Glass)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <!-- macOS Frosted Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🌐</div>
+        <div>
+          <span class="brand-title">WebRTC Conference Portal</span>
+          <span class="brand-subtitle">Node.js, Express & Socket.IO Signaling</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-btn active">Beranda</a>
+        <a href="broadcaster.html" class="nav-btn">Broadcaster</a>
+        <a href="viewer.html" class="nav-btn">Viewer</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-wrapper">
+    <!-- Hero Section -->
+    <div class="hero-section">
+      <h1 class="hero-title">Sistem Konferensi Video WebRTC Lokal</h1>
+      <p class="hero-lead">
+        Aplikasi streaming video satu arah berbasis <strong>Node.js</strong>, <strong>Socket.IO</strong>, dan <strong>WebRTC</strong> dengan sertifikat <strong>HTTPS</strong> mandiri serta dukungan transmisi langsung file video dari komputer ke perangkat lain.
+      </p>
+    </div>
+
+    <!-- Peringatan HTTPS Self-Signed Info -->
+    <div class="alert-banner info" style="margin-bottom: 32px;">
+      <span class="alert-icon">🛡️</span>
+      <div>
+        <strong>Penting untuk Akses Pertama Kali:</strong> Karena aplikasi menggunakan sertifikat SSL mandiri (Self-Signed), browser komputer maupun HP akan menampilkan peringatan keamanan (misal <em>"Your connection is not private"</em>). Klik tombol <strong>Advanced (Lanjutan)</strong> lalu klik <strong>Proceed (Lanjutkan ke situs)</strong>.
+      </div>
+    </div>
+
+    <!-- Quick Access Action Cards -->
+    <div class="portal-grid">
+      <!-- Card Broadcaster -->
+      <div class="portal-card">
+        <div class="portal-icon">📹</div>
+        <h2 class="portal-card-title">Broadcaster (Penyedia Video)</h2>
+        <p class="portal-card-desc">
+          Buka halaman penyiar untuk memilih dan memutar file video lokal dari komputer Anda, menghasilkan Token Room unik & QR Code, dan menyiarkannya ke penonton via WebRTC.
+        </p>
+        <a href="broadcaster.html" class="btn btn-primary btn-block">
+          Mulai Siaran (Broadcaster) →
+        </a>
+      </div>
+
+      <!-- Card Viewer -->
+      <div class="portal-card">
+        <div class="portal-icon">📺</div>
+        <h2 class="portal-card-title">Viewer (Penonton)</h2>
+        <p class="portal-card-desc">
+          Buka halaman penonton pada tab/browser lain atau perangkat HP di jaringan Wi-Fi yang sama, masukkan Token Room atau scan QR Code dari broadcaster, dan tonton video secara real-time.
+        </p>
+        <a href="viewer.html" class="btn btn-secondary btn-block">
+          Gabung Menonton (Viewer) →
+        </a>
+      </div>
+    </div>
+
+    <!-- Panduan 3 Skenario Percobaan & Tugas -->
+    <div class="card">
+      <div class="window-header">
+        <div class="traffic-lights">
+          <span class="traffic-dot dot-red"></span>
+          <span class="traffic-dot dot-yellow"></span>
+          <span class="traffic-dot dot-green"></span>
+        </div>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-left: 8px;">Panduan Pengujian Praktikum</span>
+      </div>
+
+      <div class="card-header">
+        <div class="card-title">
+          <span>📋 Panduan 3 Skenario Percobaan & Tugas Video</span>
+        </div>
+        <span class="badge badge-ready">Siap Diuji</span>
+      </div>
+
+      <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap: 20px; margin-top: 10px;">
+        <!-- Percobaan 1 -->
+        <div style="background: rgba(255, 255, 255, 0.85); padding: 20px; border-radius: var(--radius-lg); border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--apple-blue); font-size: 1.05rem; margin-bottom: 8px; font-weight: 700;">1. Percobaan 1 (1 Komputer Beda Browser)</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Menguji WebRTC di komputer yang sama menggunakan dua browser berbeda via localhost.</p>
+          <ol style="font-size: 0.82rem; color: var(--text-secondary); padding-left: 18px; line-height: 1.6;">
+            <li>Buka Chrome, akses <code>https://localhost:8080/broadcaster.html</code>.</li>
+            <li>Unggah file video lokal dan salin Token Room yang muncul.</li>
+            <li>Buka Edge / Firefox, akses <code>https://localhost:8080/viewer.html</code>.</li>
+            <li>Masukkan token lalu klik <strong>Join</strong>. Video akan tampil di browser kedua.</li>
+          </ol>
+        </div>
+
+        <!-- Percobaan 2 -->
+        <div style="background: rgba(255, 255, 255, 0.85); padding: 20px; border-radius: var(--radius-lg); border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--apple-purple); font-size: 1.05rem; margin-bottom: 8px; font-weight: 700;">2. Percobaan 2 (1 Komputer via IP LAN)</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Menguji akses melalui alamat IPv4 jaringan LAN pada browser kedua.</p>
+          <ol style="font-size: 0.82rem; color: var(--text-secondary); padding-left: 18px; line-height: 1.6;">
+            <li>Broadcaster tetap dibuka di browser pertama (Chrome).</li>
+            <li>Buka browser kedua, akses <code>https://[IP_LAN]:8080/viewer.html</code>.</li>
+            <li>Lewati peringatan SSL (<em>Advanced ➔ Proceed</em>).</li>
+            <li>Masukkan token untuk memutar video melalui antarmuka IP LAN.</li>
+          </ol>
+        </div>
+
+        <!-- Percobaan 3 -->
+        <div style="background: rgba(255, 255, 255, 0.85); padding: 20px; border-radius: var(--radius-lg); border: 1px solid rgba(0,0,0,0.06); box-shadow: 0 4px 12px rgba(0,0,0,0.03);">
+          <h3 style="color: var(--apple-emerald); font-size: 1.05rem; margin-bottom: 8px; font-weight: 700;">3. Percobaan 3 (Komputer ke HP / Laptop Lain)</h3>
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 12px;">Menguji transmisi video antar perangkat di jaringan Wi-Fi yang sama.</p>
+          <ol style="font-size: 0.82rem; color: var(--text-secondary); padding-left: 18px; line-height: 1.6;">
+            <li>Pastikan Komputer dan HP Anda terhubung ke <strong>Wi-Fi yang sama</strong>.</li>
+            <li>Di Broadcaster, klik <strong>"Salin Link Viewer untuk HP"</strong> atau scan QR Code dengan kamera HP.</li>
+            <li>Buka link di browser HP, lewati peringatan SSL (*Tampilkan Rincian ➔ Kunjungi situs*).</li>
+            <li>Video akan langsung streaming dari komputer ke HP Anda secara real-time!</li>
+          </ol>
+        </div>
+      </div>
+
+      <!-- Informasi Alamat IP Terdeteksi -->
+      <div class="network-info-box" style="margin-top: 24px;">
+        <strong style="color: var(--text-primary); display: block; margin-bottom: 8px;">🌐 Deteksi Alamat IP Server Anda Saat Ini:</strong>
+        <div id="portalIpList">
+          <span style="color: var(--text-muted);">Memuat informasi jaringan...</span>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    // Ambil info alamat IP LAN dari backend
+    fetch('/api/server-info')
+      .then(res => res.json())
+      .then(data => {
+        const container = document.getElementById('portalIpList');
+        if (data.ips && data.ips.length > 0) {
+          container.innerHTML = '';
+          data.ips.forEach(item => {
+            const row = document.createElement('div');
+            row.className = 'network-item';
+            row.innerHTML = `
+              <span><strong>${item.interface}</strong>: https://${item.address}:${data.port}</span>
+              <div style="display: flex; gap: 8px;">
+                <a href="https://${item.address}:${data.port}/broadcaster.html" class="btn btn-secondary btn-sm">Buka Broadcaster</a>
+                <a href="https://${item.address}:${data.port}/viewer.html" class="btn btn-primary btn-sm">Buka Viewer</a>
+              </div>
+            `;
+            container.appendChild(row);
+          });
+        } else {
+          container.innerHTML = '<span>Hanya localhost yang terdeteksi: https://localhost:' + data.port + '</span>';
+        }
+      })
+      .catch(() => {});
+  </script>
+</body>
+</html>

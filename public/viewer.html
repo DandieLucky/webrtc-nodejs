@@ -1,0 +1,380 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Peserta - WebRTC Conference Mesh (macOS White Glass)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <!-- macOS Frosted Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">🎥</div>
+        <div>
+          <span class="brand-title">WebRTC Conference</span>
+          <span class="brand-subtitle">Panel Peserta (Kamera Sendiri)</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <span id="participantBadge" class="badge badge-ready">0 Peserta</span>
+        <a href="index.html" class="nav-btn">Beranda</a>
+        <a href="broadcaster.html" class="nav-btn">Broadcaster</a>
+        <a href="viewer.html" class="nav-btn active">Peserta</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-wrapper">
+    <div class="alert-banner info">
+      <span class="alert-icon">🛡️</span>
+      <div>
+        <strong>Peringatan HTTPS Self-Signed:</strong> Jika browser menampilkan peringatan keamanan, klik <em>Advanced (Lanjutan)</em> lalu <em>Proceed (Lanjutkan)</em>. Kamera hanya bisa diakses lewat HTTPS.
+      </div>
+    </div>
+
+    <div id="troubleshootingNotice" class="alert-banner" style="display: none; background: rgba(254, 243, 199, 0.95); border-left-color: #f59e0b; color: #92400e;">
+      <span class="alert-icon">⚠️</span>
+      <div>
+        <strong>Koneksi Belum Terhubung?</strong>
+        <div style="font-size: 0.82rem; margin-top: 4px; line-height: 1.5;">
+          Jika Wi-Fi kampus/sekolah memblokir komunikasi antar perangkat (<em>AP Isolation</em>), aktifkan <strong>Personal Hotspot</strong> dan hubungkan semua perangkat ke hotspot tersebut.
+        </div>
+      </div>
+    </div>
+
+    <!-- FORM JOIN (tampil sebelum masuk room) -->
+    <div id="joinPanel" class="card" style="max-width: 520px; margin: 0 auto;">
+      <div class="window-header">
+        <div class="traffic-lights">
+          <span class="traffic-dot dot-red"></span>
+          <span class="traffic-dot dot-yellow"></span>
+          <span class="traffic-dot dot-green"></span>
+        </div>
+        <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-left: 8px;">Masuk Konferensi</span>
+      </div>
+
+      <div class="card-header">
+        <div class="card-title"><span>Gabung Sebagai Peserta</span></div>
+        <div id="preJoinStatus" class="badge badge-waiting"><span class="badge-dot"></span> Belum Terhubung</div>
+      </div>
+
+      <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+        Kamera dan mikrofon Anda akan dikirim ke semua peserta lain, dan Anda akan melihat kamera mereka masing-masing.
+      </p>
+
+      <form id="joinForm" onsubmit="event.preventDefault(); window.handleJoin();">
+        <div style="margin-bottom: 14px;">
+          <label for="nameInput" class="token-label">Nama Anda</label>
+          <input type="text" id="nameInput" class="form-input" placeholder="Contoh: Dandie" maxlength="24" autocomplete="off">
+        </div>
+
+        <div style="margin-bottom: 14px;">
+          <label for="tokenInput" class="token-label">Kode Token Room</label>
+          <input type="text" id="tokenInput" class="form-input" placeholder="Contoh: 8X9F2A1B" required autocomplete="off" style="text-transform: uppercase;">
+        </div>
+
+        <button type="submit" id="joinBtn" class="btn btn-primary btn-block" style="padding: 12px 18px; font-size: 0.95rem;">
+          🎥 Gabung dengan Kamera Saya
+        </button>
+      </form>
+
+      <div style="margin-top: 12px;">
+        <button class="btn btn-secondary btn-block btn-sm" onclick="window.pasteFromClipboard()">
+          📋 Tempel Token dari Clipboard
+        </button>
+      </div>
+    </div>
+
+    <!-- RUANG KONFERENSI (tampil setelah join) -->
+    <div id="roomPanel" style="display: none;">
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>Ruang Konferensi — <span id="roomLabel" style="font-family: ui-monospace, monospace; color: var(--apple-blue);">----</span></span></div>
+          <div id="statusBadge" class="badge badge-waiting"><span class="badge-dot"></span> Menghubungkan...</div>
+        </div>
+
+        <!-- SELF VIEW: kamera sendiri -->
+        <div style="margin-bottom: 14px;">
+          <div class="self-view-wrap">
+            <video id="localVideo" autoplay playsinline muted></video>
+            <span class="tile-label">Anda — <span id="selfNameLabel">Peserta</span></span>
+            <span id="selfMicMuted" class="tile-flag" style="display:none;">🔇 Mic Mati</span>
+          </div>
+        </div>
+
+        <!-- KONTROL MEDIA -->
+        <div class="media-controls">
+          <button id="micBtn" class="btn btn-secondary btn-sm" onclick="window.toggleMic()">🎤 Mikrofon: ON</button>
+          <button id="camBtn" class="btn btn-secondary btn-sm" onclick="window.toggleCam()">📷 Kamera: ON</button>
+          <button id="screenBtn" class="btn btn-secondary btn-sm" onclick="window.toggleScreen()">🖥️ Bagikan Layar</button>
+          <button class="btn btn-secondary btn-sm" onclick="window.leaveRoom()">🚪 Keluar Room</button>
+        </div>
+
+        <!-- GRID PESERTA LAIN -->
+        <div class="card-title" style="margin: 20px 0 10px 0; font-size: 1rem;">
+          <span>Peserta Lain</span>
+        </div>
+        <div id="videoGrid" class="video-grid"></div>
+        <div id="emptyGridNotice" class="video-placeholder" style="min-height: 160px;">
+          <div class="video-placeholder-icon">👥</div>
+          <h3>Belum Ada Peserta Lain</h3>
+          <p>Bagikan token room ke teman sekelas Anda. Begitu mereka bergabung, kamera mereka akan muncul di sini.</p>
+        </div>
+      </div>
+
+      <!-- LOG -->
+      <div class="card">
+        <div class="card-header">
+          <div class="card-title"><span>Log Koneksi Mesh</span></div>
+          <button class="btn btn-secondary btn-sm" onclick="document.getElementById('logBox').innerHTML = ''">Bersihkan Log</button>
+        </div>
+        <div id="logBox" class="log-box"></div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module">
+    import {
+      joinRoom, connectToExistingPeers, registerUI, log, showToast,
+      acquireLocalMedia, toggleLocalAudio, toggleLocalVideo,
+      startScreenShare, stopScreenShare, socket, getSelfId
+    } from './mesh.js';
+
+    const grid = document.getElementById('videoGrid');
+    const emptyNotice = document.getElementById('emptyGridNotice');
+    const tiles = new Map(); // peerId -> element refs
+
+    // ---------- LOG KE UI ----------
+    registerUI({
+      onLog(message, type) {
+        const box = document.getElementById('logBox');
+        if (!box) return;
+        const time = new Date().toLocaleTimeString('id-ID', { hour12: false });
+        const entry = document.createElement('div');
+        entry.className = `log-entry ${type}`;
+        entry.innerHTML = `<span class="log-time">${time}</span> <span>${message.replace(/</g, '&lt;')}</span>`;
+        box.appendChild(entry);
+        box.scrollTop = box.scrollHeight;
+      },
+
+      onLocalStream(stream) {
+        const v = document.getElementById('localVideo');
+        v.srcObject = stream;
+        v.play().catch(() => {});
+        window.updateMicButtons();
+      },
+
+      onPeerStream(peerId, peer) {
+        const tile = ensureTile(peerId, peer);
+        const video = tile.querySelector('video');
+        if (video.srcObject !== peer.stream) {
+          video.srcObject = peer.stream;
+          video.play().catch(() => {});
+        }
+        applyTileState(tile, peer);
+      },
+
+      onPeerRemoved(peerId) {
+        const tile = tiles.get(peerId);
+        if (tile) { tile.remove(); tiles.delete(peerId); }
+        updateGridNotice();
+      },
+
+      onRoster(participants) {
+        document.getElementById('participantBadge').innerText = `${participants.length} Peserta`;
+        document.getElementById('statusBadge').className = 'badge badge-live';
+        document.getElementById('statusBadge').innerHTML =
+          `<span class="badge-dot"></span> ${participants.length} Peserta`;
+      },
+
+      onMediaState(peerId, state) {
+        const tile = tiles.get(peerId);
+        if (!tile) return;
+        const flag = tile.querySelector('.tile-flag');
+        const v = tile.querySelector('video');
+        v.style.opacity = state.videoEnabled ? '1' : '0.15';
+        if (!state.audioEnabled) {
+          flag.style.display = 'inline-block';
+          flag.innerText = '🔇 Mic Mati';
+        } else if (!state.videoEnabled) {
+          flag.style.display = 'inline-block';
+          flag.innerText = '📷 Kamera Mati';
+        } else {
+          flag.style.display = 'none';
+        }
+      }
+    });
+
+    // ---------- BUAT TILE PESERTA ----------
+    // Tentukan tampilan state tile dari kondisi nyata peer connection.
+    // `iceConnectionState` lebih cepat berubah daripada `connectionState`,
+    // jadi pakai yang sudah 'connected' lebih dulu supaya label tidak nyangkut.
+    function applyTileState(tile, peer) {
+      const conn = peer.pc.connectionState;
+      const ice = peer.pc.iceConnectionState;
+      const state = (conn === 'connected' || ice === 'connected' || ice === 'completed')
+        ? 'connected'
+        : (conn === 'failed' || ice === 'failed') ? 'failed'
+        : (conn === 'connecting' || ice === 'checking') ? 'connecting'
+        : conn;
+
+      tile.dataset.state = state;
+      const label = tile.querySelector('.tile-state');
+      if (label) {
+        label.innerText =
+          state === 'connected' ? '● Live' :
+          state === 'connecting' ? '◌ Menghubungkan' :
+          state === 'failed' ? '✕ Gagal' : state;
+      }
+    }
+
+    function ensureTile(peerId, peer) {
+      if (tiles.has(peerId)) {
+        const t = tiles.get(peerId);
+        t.querySelector('.tile-name').innerText = peer.name || 'Peserta';
+        return t;
+      }
+
+      const tile = document.createElement('div');
+      tile.className = 'video-tile';
+      tile.dataset.peerId = peerId;
+      tile.innerHTML = `
+        <video autoplay playsinline></video>
+        <span class="tile-label">${(peer.name || 'Peserta').replace(/</g, '&lt;')}</span>
+        <span class="tile-state">◌ Menghubungkan</span>
+        <span class="tile-flag" style="display:none;"></span>
+        <button class="tile-fullscreen" title="Layar penuh">⛶</button>
+      `;
+
+      tile.querySelector('.tile-fullscreen').onclick = () => {
+        const v = tile.querySelector('video');
+        if (!document.fullscreenElement) v.requestFullscreen().catch(() => {});
+        else document.exitFullscreen();
+      };
+
+      grid.appendChild(tile);
+      tiles.set(peerId, tile);
+      updateGridNotice();
+      return tile;
+    }
+
+    function updateGridNotice() {
+      emptyNotice.style.display = tiles.size === 0 ? 'flex' : 'none';
+    }
+
+    // ---------- KONTROL MEDIA ----------
+    window.updateMicButtons = function() {
+      const btn = document.getElementById('micBtn');
+      const camBtn = document.getElementById('camBtn');
+      const v = document.getElementById('localVideo');
+      const stream = v ? v.srcObject : null;
+      if (stream) {
+        const at = stream.getAudioTracks()[0];
+        const vt = stream.getVideoTracks()[0];
+        if (at) btn.innerText = at.enabled ? '🎤 Mikrofon: ON' : '🔇 Mikrofon: OFF';
+        if (vt) camBtn.innerText = vt.enabled ? '📷 Kamera: ON' : '📷 Kamera: OFF';
+        document.getElementById('selfMicMuted').style.display = (at && !at.enabled) ? 'inline-block' : 'none';
+      }
+    };
+
+    window.toggleMic = function() {
+      const on = toggleLocalAudio();
+      window.updateMicButtons();
+      showToast(on ? 'Mikrofon dinyalakan' : 'Mikrofon dibisukan');
+    };
+
+    window.toggleCam = function() {
+      const on = toggleLocalVideo();
+      window.updateMicButtons();
+      showToast(on ? 'Kamera dinyalakan' : 'Kamera dimatikan');
+    };
+
+    let screenSharing = false;
+    window.toggleScreen = async function() {
+      const btn = document.getElementById('screenBtn');
+      if (!screenSharing) {
+        const s = await startScreenShare();
+        if (s) { screenSharing = true; btn.innerText = '⏹️ Stop Layar'; btn.classList.add('btn-success'); }
+      } else {
+        stopScreenShare();
+        screenSharing = false;
+        btn.innerText = '🖥️ Bagikan Layar';
+        btn.classList.remove('btn-success');
+      }
+    };
+
+    window.leaveRoom = function() {
+      window.location.reload();
+    };
+
+    window.pasteFromClipboard = async function() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('tokenInput').value = text.trim().toUpperCase();
+          log(`Token ditempel: ${text.trim()}`, 'info');
+        }
+      } catch (e) {
+        alert('Gagal membaca clipboard. Tempel manual saja.');
+      }
+    };
+
+    // ---------- JOIN ----------
+    window.handleJoin = async function() {
+      const token = document.getElementById('tokenInput').value.trim();
+      const name = document.getElementById('nameInput').value.trim() || 'Peserta';
+      if (!token) return;
+
+      const btn = document.getElementById('joinBtn');
+      btn.disabled = true;
+      btn.innerText = 'Mengaktifkan kamera...';
+
+      document.getElementById('joinPanel').style.display = 'none';
+      document.getElementById('roomPanel').style.display = 'block';
+      document.getElementById('roomLabel').innerText = token.toUpperCase();
+      document.getElementById('selfNameLabel').innerText = name;
+
+      try {
+        await joinRoom({ roomId: token, name, role: 'viewer', withMedia: true });
+      } catch (err) {
+        log(`Gagal join: ${err.message}`, 'error');
+      }
+    };
+
+    // Server memberi daftar peer existing → kita yang menghubungi mereka
+    socket.on('room-status', async ({ status, participants, hasVideo }) => {
+      if (status === 'found') {
+        log('Room ditemukan. Menghubungi peserta lain...', 'success');
+        await connectToExistingPeers(participants);
+      } else if (status === 'waiting-broadcaster') {
+        log('Room belum aktif. Pastikan Broadcaster sudah membuka halamannya.', 'warn');
+        document.getElementById('statusBadge').innerHTML =
+          '<span class="badge-dot"></span> Menunggu Broadcaster';
+      }
+      void hasVideo;
+    });
+
+    socket.on('broadcaster-video-ready', () => {
+      log('Broadcaster mulai memutar video.', 'success');
+    });
+
+    // ---------- AUTO-FILL DARI URL ----------
+    window.addEventListener('DOMContentLoaded', () => {
+      const p = new URLSearchParams(window.location.search);
+      const token = p.get('token');
+      const savedName = sessionStorage.getItem('webrtc_name');
+      if (savedName) document.getElementById('nameInput').value = savedName;
+      if (token) {
+        document.getElementById('tokenInput').value = token.trim().toUpperCase();
+        log(`Token terdeteksi dari URL: ${token}`, 'info');
+      }
+      void getSelfId;
+    });
+  </script>
+</body>
+</html>

@@ -1,0 +1,12 @@
+# Dependencies
+node_modules/
+
+# macOS
+.DS_Store
+
+# Self-signed dev certificates — generate lokal dengan: npm run gen-cert
+ssl/*.pem
+
+# Logs
+*.log
+npm-debug.log*

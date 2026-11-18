@@ -1,0 +1,251 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Viewer - WebRTC Conference Stream (macOS White Glass)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <!-- macOS Frosted Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">📺</div>
+        <div>
+          <span class="brand-title">WebRTC Conference</span>
+          <span class="brand-subtitle">Panel Viewer (Penonton Siaran)</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <a href="index.html" class="nav-btn">Beranda</a>
+        <a href="broadcaster.html" class="nav-btn">Broadcaster</a>
+        <a href="viewer.html" class="nav-btn active">Viewer</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-wrapper">
+    <!-- Notice SSL -->
+    <div class="alert-banner info">
+      <span class="alert-icon">🛡️</span>
+      <div>
+        <strong>Peringatan HTTPS Self-Signed:</strong> Jika browser menampilkan peringatan keamanan koneksi, klik <em>Advanced (Lanjutan)</em> lalu pilih <em>Proceed (Lanjutkan)</em>.
+      </div>
+    </div>
+
+    <!-- Troubleshooting Notice jika koneksi macet / AP isolation -->
+    <div id="troubleshootingNotice" class="alert-banner" style="display: none; background: rgba(254, 243, 199, 0.95); border-left-color: #f59e0b; color: #92400e;">
+      <span class="alert-icon">⚠️</span>
+      <div>
+        <strong>Koneksi Belum Terhubung?</strong>
+        <div style="font-size: 0.82rem; margin-top: 4px; line-height: 1.5;">
+          1. Pastikan Broadcaster sudah memilih dan memutar file video di laptop.<br>
+          2. Jika Anda menggunakan Wi-Fi publik/kampus, router mungkin memblokir komunikasi antar perangkat (<em>AP Isolation</em>). <strong>Solusinya:</strong> Aktifkan Personal Hotspot di HP, lalu sambungkan laptop ke Hotspot HP tersebut!
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- Main Video Display Area -->
+      <div>
+        <div class="card">
+          <!-- macOS Window Header with Traffic Lights -->
+          <div class="window-header">
+            <div class="traffic-lights">
+              <span class="traffic-dot dot-red"></span>
+              <span class="traffic-dot dot-yellow"></span>
+              <span class="traffic-dot dot-green"></span>
+            </div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-left: 8px;">Penerima Siaran WebRTC</span>
+          </div>
+
+          <div class="card-header">
+            <div class="card-title">
+              <span>Siaran Langsung Broadcaster</span>
+            </div>
+            <div id="statusBadge" class="badge badge-waiting">
+              <span class="badge-dot"></span> Belum Terhubung
+            </div>
+          </div>
+
+          <!-- Video Stage -->
+          <div class="video-stage">
+            <span class="video-overlay-badge badge badge-live">
+              <span class="badge-dot"></span> LIVE STREAM
+            </span>
+
+            <!-- Prompt Klik Suara jika browser memblokir Autoplay Audio -->
+            <div id="audioPromptOverlay" class="audio-prompt-overlay" style="display: none;" onclick="unmuteRemoteVideo()">
+              <div class="audio-prompt-card">
+                <div style="font-size: 2.2rem; margin-bottom: 8px;">🔊</div>
+                <h4 style="margin-bottom: 4px; font-weight: 700;">Ketuk untuk Menyalakan Suara</h4>
+                <p style="font-size: 0.82rem; color: var(--text-secondary);">Browser HP memerlukan izin ketukan untuk memutar audio siaran.</p>
+              </div>
+            </div>
+
+            <!-- Placeholder jika belum ada siaran -->
+            <div id="videoPlaceholder" class="video-placeholder">
+              <div class="video-placeholder-icon">📡</div>
+              <h3>Menunggu Koneksi Siaran</h3>
+              <p>Masukkan token dari Broadcaster di samping lalu klik <strong>Join</strong> untuk mulai menonton siaran video secara real-time.</p>
+            </div>
+
+            <video id="remoteVideo" autoplay playsinline webkit-playsinline controls></video>
+          </div>
+
+          <!-- Controls Bar Bawah Video -->
+          <div class="controls-bar">
+            <button id="fullscreenBtn" class="btn btn-secondary btn-sm" onclick="toggleFullScreen()">
+              ⛶ Layar Penuh
+            </button>
+            <button id="toggleAudioBtn" class="btn btn-secondary btn-sm" onclick="unmuteRemoteVideo()">
+              🔊 Nyalakan Suara
+            </button>
+          </div>
+        </div>
+
+        <!-- Log Aktivitas Signaling Viewer -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>Log Koneksi WebRTC</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('logBox').innerHTML = ''">
+              Bersihkan Log
+            </button>
+          </div>
+          <div id="logBox" class="log-box"></div>
+        </div>
+      </div>
+
+      <!-- Sidebar Form Gabung Room -->
+      <div>
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>Gabung Siaran</span>
+            </div>
+          </div>
+
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 16px;">
+            Masukkan kode token yang diberikan oleh Broadcaster untuk menerima transmisi video WebRTC secara langsung.
+          </p>
+
+          <form id="joinForm" onsubmit="event.preventDefault(); handleJoin();">
+            <div style="margin-bottom: 14px;">
+              <label for="tokenInput" class="token-label">Kode Token Room</label>
+              <input type="text" id="tokenInput" class="form-input" placeholder="Contoh: 8X9F2A1B" required autocomplete="off" style="text-transform: uppercase;">
+            </div>
+
+            <button type="submit" id="joinBtn" class="btn btn-primary btn-block" style="padding: 12px 18px; font-size: 0.95rem;">
+              🚀 Join Siaran
+            </button>
+          </form>
+
+          <div style="margin-top: 12px;">
+            <button class="btn btn-secondary btn-block btn-sm" onclick="pasteFromClipboard()">
+              📋 Tempel Token dari Clipboard
+            </button>
+          </div>
+        </div>
+
+        <!-- Panduan Pengujian Viewer -->
+        <div class="card">
+          <div class="card-title" style="margin-bottom: 12px;">
+            <span>Petunjuk Penggunaan</span>
+          </div>
+          <div style="font-size: 0.85rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 10px;">
+            <div class="instruction-step" style="margin-bottom: 8px;">
+              <div class="step-num">1</div>
+              <div class="step-content">
+                Minta <strong>Token Siaran</strong> atau buka link siaran dari Broadcaster.
+              </div>
+            </div>
+            <div class="instruction-step" style="margin-bottom: 8px;">
+              <div class="step-num">2</div>
+              <div class="step-content">
+                Jika membuka via link, form akan terisi otomatis. Klik tombol <strong>Join Siaran</strong>.
+              </div>
+            </div>
+            <div class="instruction-step">
+              <div class="step-num">3</div>
+              <div class="step-content">
+                Video dari file komputer broadcaster akan streaming langsung ke perangkat Anda!
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module" src="main.js"></script>
+  <script type="module">
+    import { startView, log } from './main.js';
+
+    // Handler Join
+    window.handleJoin = function() {
+      const tokenInput = document.getElementById('tokenInput');
+      const roomId = tokenInput.value.trim();
+      if (roomId) {
+        startView(roomId);
+      }
+    };
+
+    // Handler Tempel dari Clipboard
+    window.pasteFromClipboard = async function() {
+      try {
+        const text = await navigator.clipboard.readText();
+        if (text) {
+          document.getElementById('tokenInput').value = text.trim().toUpperCase();
+          log(`Token ditempel dari clipboard: ${text.trim()}`, 'info');
+        }
+      } catch (err) {
+        alert('Gagal membaca clipboard. Silakan tempel secara manual.');
+      }
+    };
+
+    // Handler Unmute Video
+    window.unmuteRemoteVideo = function() {
+      const remoteVideo = document.getElementById('remoteVideo');
+      const audioPrompt = document.getElementById('audioPromptOverlay');
+      if (remoteVideo) {
+        remoteVideo.muted = false;
+        remoteVideo.play();
+        if (audioPrompt) audioPrompt.style.display = 'none';
+        log('Suara siaran diaktifkan', 'info');
+      }
+    };
+
+    // Fullscreen toggle
+    window.toggleFullScreen = function() {
+      const remoteVideo = document.getElementById('remoteVideo');
+      if (remoteVideo) {
+        if (!document.fullscreenElement) {
+          remoteVideo.requestFullscreen().catch(err => {
+            alert(`Error fullscreen: ${err.message}`);
+          });
+        } else {
+          document.exitFullscreen();
+        }
+      }
+    };
+
+    // Auto-fill & auto-connect jika token ada di URL (?token=XXXXX)
+    window.addEventListener('DOMContentLoaded', () => {
+      const urlParams = new URLSearchParams(window.location.search);
+      const tokenFromUrl = urlParams.get('token');
+      if (tokenFromUrl) {
+        const tokenInput = document.getElementById('tokenInput');
+        tokenInput.value = tokenFromUrl.trim().toUpperCase();
+        log(`Token terdeteksi otomatis dari URL: ${tokenFromUrl}`, 'info');
+        startView(tokenFromUrl.trim());
+      }
+    });
+  </script>
+</body>
+</html>

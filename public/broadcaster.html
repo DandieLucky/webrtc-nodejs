@@ -1,0 +1,337 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Broadcaster - WebRTC Conference Stream (macOS White Glass)</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <div class="bg-glow"></div>
+
+  <!-- macOS Frosted Navbar -->
+  <nav class="navbar">
+    <div class="nav-container">
+      <a href="index.html" class="brand">
+        <div class="brand-icon">📹</div>
+        <div>
+          <span class="brand-title">WebRTC Conference</span>
+          <span class="brand-subtitle">Panel Broadcaster Studio (Penyedia Video)</span>
+        </div>
+      </a>
+      <div class="nav-links">
+        <span id="liveIpBadge" class="badge badge-ready" style="font-family: monospace;">Memuat IP...</span>
+        <a href="index.html" class="nav-btn">Beranda</a>
+        <a href="broadcaster.html" class="nav-btn active">Broadcaster</a>
+        <a href="viewer.html" class="nav-btn">Viewer</a>
+      </div>
+    </div>
+  </nav>
+
+  <div class="main-wrapper">
+    <!-- Notice SSL & Jaringan -->
+    <div class="alert-banner info">
+      <span class="alert-icon">🛡️</span>
+      <div>
+        <strong>Peringatan HTTPS Self-Signed:</strong> Jika browser HP/Laptop lain menampilkan peringatan koneksi aman saat pertama membuka link, klik <em>Advanced (Lanjutan)</em> lalu pilih <em>Proceed (Lanjutkan ke situs)</em>.
+      </div>
+    </div>
+
+    <!-- Troubleshooting Wi-Fi AP Isolation Callout -->
+    <div class="alert-banner success" style="border-left-color: #0284c7; background: rgba(238, 248, 255, 0.9);">
+      <span class="alert-icon">💡</span>
+      <div>
+        <strong>Tips Percobaan 3 (Jika HP/Laptop lain tidak bisa membuka link):</strong>
+        <div style="font-size: 0.82rem; margin-top: 3px; color: #1e3a8a;">
+          Wi-Fi kampus, kantor, atau sekolah biasanya mengaktifkan <em>AP/Client Isolation</em> (router memblokir koneksi antar perangkat). Solusi paling mudah dan 100% ampuh: <strong>Aktifkan Personal Hotspot di HP Anda</strong>, lalu hubungkan laptop ini ke Hotspot HP tersebut!
+        </div>
+      </div>
+    </div>
+
+    <div class="dashboard-grid">
+      <!-- Main Video Stage & Source Selection -->
+      <div>
+        <div class="card">
+          <!-- macOS Window Header with Traffic Lights -->
+          <div class="window-header">
+            <div class="traffic-lights">
+              <span class="traffic-dot dot-red"></span>
+              <span class="traffic-dot dot-yellow"></span>
+              <span class="traffic-dot dot-green"></span>
+            </div>
+            <span style="font-size: 0.8rem; font-weight: 600; color: var(--text-muted); margin-left: 8px;">Layar Siaran Utama</span>
+          </div>
+
+          <div class="card-header">
+            <div class="card-title">
+              <span>Preview Video Siaran</span>
+            </div>
+            <div id="statusBadge" class="badge badge-waiting">
+              <span class="badge-dot"></span> Menunggu Video
+            </div>
+          </div>
+
+          <!-- Video Stage -->
+          <div class="video-stage">
+            <span class="video-overlay-badge badge badge-live">
+              <span class="badge-dot"></span> BROADCASTER LIVE
+            </span>
+            <span class="video-stats-badge" id="videoDurationStats">Lokal Preview (Muted)</span>
+
+            <!-- Placeholder saat belum ada video -->
+            <div id="videoPlaceholder" class="video-placeholder">
+              <div class="video-placeholder-icon">🎬</div>
+              <h3>Pilih File Video dari Komputer</h3>
+              <p>Pilih atau seret file video lokal (.mp4, .webm) dari komputer Anda untuk disiarkan ke Viewer.</p>
+            </div>
+
+            <video id="localVideo" autoplay playsinline muted></video>
+          </div>
+
+          <!-- Kontrol Bar Pemutaran Video (Play/Pause, Slider, Time) -->
+          <div id="videoControlsBar" class="controls-bar" style="display: none; align-items: center; background: rgba(0,0,0,0.04); padding: 10px 14px; border-radius: var(--radius-md); border: 1px solid rgba(0,0,0,0.06);">
+            <button id="playPauseBtn" class="btn btn-secondary btn-sm">⏸️ Jeda</button>
+            <button id="muteBtn" class="btn btn-secondary btn-sm">🔇 Bisu Monitor</button>
+            <input type="range" id="videoTimeline" min="0" max="100" value="0" style="flex: 1; accent-color: var(--apple-blue); cursor: pointer;">
+            <span id="timeDisplay" style="font-size: 0.8rem; font-family: ui-monospace, monospace; color: var(--text-secondary); min-width: 90px; text-align: right;">00:00 / 00:00</span>
+          </div>
+
+          <!-- Switcher Tab Sumber Media -->
+          <div style="margin-top: 20px;">
+            <div class="tabs-container">
+              <button id="tabFile" class="tab-btn active" onclick="switchMediaSource('file')">
+                📁 File Video Komputer (Tugas Utama)
+              </button>
+              <button id="tabCamera" class="tab-btn" onclick="switchMediaSource('camera')">
+                📷 Kamera & Mic
+              </button>
+              <button id="tabDemo" class="tab-btn" onclick="switchMediaSource('demo')">
+                ⚡ Demo Animasi Instan
+              </button>
+            </div>
+
+            <!-- Bagian File Video -->
+            <div id="fileSourceSection">
+              <!-- Dropzone -->
+              <div id="dropzone" class="dropzone-container">
+                <input type="file" id="videoFileInput" class="file-input-hidden" accept="video/mp4,video/webm,video/ogg,video/quicktime">
+                <div class="dropzone-icon">📥</div>
+                <div class="dropzone-title">Klik atau seret file video ke sini</div>
+                <div class="dropzone-subtitle">Mendukung format MP4, WebM, OGG, atau MOV</div>
+              </div>
+
+              <!-- File Info Banner setelah file dipilih -->
+              <div id="fileDetails" class="file-details-banner" style="display: none;">
+                <div class="file-info">
+                  <span style="font-size: 1.4rem;">🎞️</span>
+                  <div>
+                    <div id="selectedFileName" class="file-name">video.mp4</div>
+                    <div id="selectedFileSize" style="color: var(--text-muted); font-size: 0.75rem;">0 MB</div>
+                  </div>
+                </div>
+                <button class="btn btn-secondary btn-sm" onclick="triggerChangeVideo()">
+                  🔄 Ganti Video
+                </button>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Log Aktivitas Koneksi / Signaling -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>Log Signaling & WebRTC</span>
+            </div>
+            <button class="btn btn-secondary btn-sm" onclick="document.getElementById('logBox').innerHTML = ''">
+              Bersihkan Log
+            </button>
+          </div>
+          <div id="logBox" class="log-box"></div>
+        </div>
+      </div>
+
+      <!-- Sidebar Room, Akses HP & QR Code -->
+      <div>
+        <!-- Kamera Peserta (mesh) -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>Kamera Peserta</span>
+            </div>
+            <span id="rosterCount" class="badge badge-ready">0 Peserta</span>
+          </div>
+
+          <p style="font-size: 0.82rem; color: var(--text-secondary); margin-bottom: 12px;">
+            Setiap peserta mengirim kamera & mikrofonnya sendiri. Kameranya muncul di bawah ini.
+          </p>
+
+          <div id="rosterList" class="roster-list"></div>
+
+          <div id="participantGrid" class="video-grid" style="margin-top: 12px;"></div>
+          <div id="emptyGridNotice" class="video-placeholder" style="min-height: 130px; margin-top: 12px;">
+            <div class="video-placeholder-icon">👥</div>
+            <h3>Belum Ada Peserta</h3>
+            <p>Bagikan token room ke peserta. Kamera mereka akan muncul di sini.</p>
+          </div>
+        </div>
+
+        <!-- Token Room Card -->
+        <div class="card">
+          <div class="card-header">
+            <div class="card-title">
+              <span>Token Siaran</span>
+            </div>
+            <span id="viewerCountBadge" class="badge badge-ready">
+              0 Penonton Aktif
+            </span>
+          </div>
+
+          <p style="font-size: 0.85rem; color: var(--text-secondary); margin-bottom: 14px;">
+            Bagikan kode token ini ke peserta untuk bergabung ke siaran video Anda.
+          </p>
+
+          <div style="margin-bottom: 14px;">
+            <label for="hostNameInput" class="token-label">Nama Anda (Host)</label>
+            <input type="text" id="hostNameInput" class="form-input" placeholder="Contoh: Dandie" maxlength="24" autocomplete="off">
+          </div>
+
+          <!-- Kontrol kamera host (opsional, mesh) -->
+          <div class="media-controls" style="margin-bottom: 14px;">
+            <button id="hostMicBtn" class="btn btn-secondary btn-sm" onclick="window.hostToggleMic()">Mikrofon: OFF</button>
+            <button id="hostCamBtn" class="btn btn-secondary btn-sm" onclick="window.hostToggleCam()">Kamera: OFF</button>
+            <button id="hostScreenBtn" class="btn btn-secondary btn-sm" onclick="window.hostToggleScreen(this)">Bagikan Layar</button>
+          </div>
+
+          <div class="token-card">
+            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 6px;">
+              <span class="token-label" style="margin-bottom: 0;">Room Token (Kode Unik)</span>
+              <button id="resetRoomBtn" class="btn btn-secondary btn-sm" style="padding: 3px 8px; font-size: 0.75rem;" title="Buat Token Baru">
+                🔄 Ganti Token
+              </button>
+            </div>
+            <div class="token-input-group">
+              <div id="token" class="token-display" title="Klik untuk menyalin">Memuat...</div>
+              <button id="copyTokenBtn" class="btn btn-primary btn-sm" title="Salin Token">
+                📋 Salin
+              </button>
+            </div>
+          </div>
+
+          <!-- Tombol Salin Link Khusus HP (IP LAN) -->
+          <div style="display: flex; flex-direction: column; gap: 10px; margin-bottom: 16px;">
+            <button id="copyPhoneLinkBtn" class="btn btn-phone btn-block" style="padding: 12px 16px; font-size: 0.92rem;">
+              📱 Salin Link Viewer untuk HP / Device Lain
+            </button>
+            <button id="copyLocalLinkBtn" class="btn btn-secondary btn-block btn-sm">
+              💻 Salin Link untuk Browser Laptop ini (Localhost)
+            </button>
+          </div>
+
+          <!-- QR Code Card untuk HP -->
+          <div class="qr-container">
+            <strong style="display: block; font-size: 0.9rem; color: var(--text-primary); margin-bottom: 4px;">
+              📲 Scan dengan Kamera HP
+            </strong>
+            <p style="font-size: 0.75rem; color: var(--text-muted); margin-bottom: 10px;">
+              Arahkan kamera HP ke QR Code ini untuk langsung membuka siaran.
+            </p>
+            <img id="qrCodeImage" class="qr-image" alt="QR Code Viewer" style="display: none;">
+            <div id="lanViewerLinkText" style="font-size: 0.72rem; word-break: break-all; font-family: ui-monospace, monospace; color: var(--apple-blue); margin-top: 8px;">
+              Memuat link siaran...
+            </div>
+          </div>
+        </div>
+
+        <!-- Panduan Khusus HP (iPhone & Android) -->
+        <div class="card" style="background: rgba(240, 249, 255, 0.75); border-color: rgba(0, 113, 227, 0.2);">
+          <div class="card-title" style="margin-bottom: 10px; font-size: 1rem; color: var(--apple-blue);">
+            <span>📱 Cara Melewati Peringatan SSL di HP</span>
+          </div>
+          <div style="font-size: 0.8rem; color: var(--text-secondary); display: flex; flex-direction: column; gap: 8px;">
+            <div style="background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.06);">
+              <strong style="color: var(--text-primary);">🍎 iPhone (Safari):</strong>
+              <div style="margin-top: 3px;">
+                Ketuk <em>"Tampilkan Rincian" (Show Details)</em> di bagian bawah layar ➔ ketuk <em>"kunjungi situs web ini" (visit this website)</em> ➔ konfirmasi.
+              </div>
+            </div>
+            <div style="background: #ffffff; padding: 10px 12px; border-radius: var(--radius-sm); border: 1px solid rgba(0,0,0,0.06);">
+              <strong style="color: var(--text-primary);">🤖 Android (Chrome):</strong>
+              <div style="margin-top: 3px;">
+                Ketuk tombol <em>"Lanjutan" (Advanced)</em> ➔ ketuk <em>"Lanjutkan ke situs (tidak aman)"</em>.
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script src="/socket.io/socket.io.js"></script>
+  <script type="module">
+    import { startBroadcast } from './main.js';
+    import { acquireLocalMedia, toggleLocalAudio, toggleLocalVideo, startScreenShare, stopScreenShare, log, setDisplayName } from './mesh.js';
+
+    // Nama host dipakai untuk roster kamera peserta
+    const nameInput = document.getElementById('hostNameInput');
+    nameInput.value = sessionStorage.getItem('webrtc_name') || 'Host';
+    nameInput.addEventListener('input', () => {
+      const clean = nameInput.value.trim() || 'Host';
+      sessionStorage.setItem('webrtc_name', clean);
+      setDisplayName(clean); // sebar nama baru ke roster + semua peer
+    });
+    sessionStorage.setItem('webrtc_name', nameInput.value);
+
+    let hostMediaOn = false;
+
+    window.hostToggleMic = async function() {
+      if (!hostMediaOn) { await window.hostStartMedia(); return; }
+      const on = toggleLocalAudio();
+      document.getElementById('hostMicBtn').innerText = on ? 'Mikrofon: ON' : 'Mikrofon: OFF';
+    };
+
+    window.hostToggleCam = async function() {
+      if (!hostMediaOn) { await window.hostStartMedia(); return; }
+      const on = toggleLocalVideo();
+      document.getElementById('hostCamBtn').innerText = on ? 'Kamera: ON' : 'Kamera: OFF';
+    };
+
+    window.hostStartMedia = async function() {
+      try {
+        // acquireLocalMedia() sudah memanggil setLocalStream() di mesh.js, yang akan
+        // memasang track ke semua peer + mengirim offer renegosiasi (extra: true).
+        const stream = await acquireLocalMedia({ video: true, audio: true });
+        hostMediaOn = true;
+        document.getElementById('hostMicBtn').innerText = 'Mikrofon: ON';
+        document.getElementById('hostCamBtn').innerText = 'Kamera: ON';
+        // Tampilkan juga di preview utama kalau belum ada file video
+        const localVideo = document.getElementById('localVideo');
+        if (localVideo && !localVideo.src) {
+          localVideo.srcObject = stream;
+          localVideo.muted = true;
+          localVideo.play().catch(() => {});
+          const ph = document.getElementById('videoPlaceholder');
+          if (ph) ph.style.display = 'none';
+        }
+      } catch (err) {
+        log(`Kamera host tidak bisa diakses: ${err.message}`, 'error');
+      }
+    };
+
+    window.hostToggleScreen = function(btn) {
+      if (!btn._sharing) {
+        startScreenShare().then(s => {
+          if (s) { btn._sharing = true; btn.innerText = 'Stop Layar'; btn.classList.add('btn-success'); }
+        });
+      } else {
+        stopScreenShare();
+        btn._sharing = false;
+        btn.innerText = 'Bagikan Layar';
+        btn.classList.remove('btn-success');
+      }
+    };
+
+    startBroadcast();
+  </script>
+</body>
+</html>
